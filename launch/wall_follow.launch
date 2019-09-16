@@ -1,0 +1,4 @@
+<launch>
+    <rosparam file="$(find f110_wall_follow)/config/config.yaml" />
+    <node pkg="f110_wall_follow" name="f110_wall_follow" type="f110_wall_follow"/>
+</launch>
