@@ -1,9 +1,9 @@
 # Config File for f110_wall_follow package
 
 # Wall Follow PID controller gains
-kp : 0.0
+kp : 0.4
 ki : 0.0
-kd : 0.0
+kd : 0.01
 
 # Wall Follow Parameters
 
@@ -13,6 +13,9 @@ angle_range : 270
 # Desired Wall Follow distance in meters
 desired_distance_right : 0.9
 desired_distance_left : 0.55
+
+# Look-ahead Distance
+lookahead_distance : 0.0
 
 # Car Length
 car_length : 0.50
