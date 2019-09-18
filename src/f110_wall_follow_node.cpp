@@ -8,7 +8,7 @@ public:
     WallFollow():
             node_handle_(ros::NodeHandle()),
             lidar_sub_(node_handle_.subscribe("scan", 100, &WallFollow::scan_callback, this)),
-            drive_pub_(node_handle_.advertise<ackermann_msgs::AckermannDriveStamped>("drive", 100))
+            drive_pub_(node_handle_.advertise<ackermann_msgs::AckermannDriveStamped>("nav", 100))
     {
         node_handle_.getParam("/kp", kp_);
         node_handle_.getParam("/ki", ki_);
@@ -20,6 +20,7 @@ public:
         node_handle_.getParam("/lookahead_distance", lookahead_distance_);
         prev_reading_time_ = ros::Time::now().toNSec();
         current_reading_time = ros::Time::now().toNSec();
+        node_handle_.getParam("/error_based_velocities", error_based_velocities_);
     }
 
     /// Returns the distance from obstacle at a given angle from the Laser Scan Message
@@ -33,13 +34,14 @@ public:
         return scan_msg->ranges[static_cast<int>(required_range_index)];
     }
 
-    void pid_control()
+    /// PID controller to control the steering of the car and adjust the velocity accordingly
+    void control_steering()
     {
         prev_reading_time_ = current_reading_time;
         current_reading_time = ros::Time::now().toSec();
         const auto dt = current_reading_time - prev_reading_time_;
 
-        integral_ += error_*dt;
+        integral_ += error_;
 
         const double p_control_value = kp_*error_ + kd_*(error_ - prev_error_)/dt + ki_*(integral_);
 
@@ -47,7 +49,19 @@ public:
         drive_msg.header.stamp = ros::Time::now();
         drive_msg.header.frame_id = "laser";
         drive_msg.drive.steering_angle = p_control_value;
-        drive_msg.drive.speed = 0.5;
+
+        if(abs(p_control_value) > 0.349)
+        {
+            drive_msg.drive.speed = error_based_velocities_["high"];
+        }
+        else if(abs(p_control_value) > 0.174)
+        {
+            drive_msg.drive.speed = error_based_velocities_["medium"];
+        }
+        else
+        {
+            drive_msg.drive.speed = error_based_velocities_["low"];
+        }
         drive_pub_.publish(drive_msg);
 
         prev_error_ = error_;
@@ -76,20 +90,25 @@ public:
     void scan_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg)
     {
         get_error(scan_msg);
-        pid_control();
+        control_steering();
     }
 
 private:
     ros::NodeHandle node_handle_;
     ros::Subscriber lidar_sub_;
     ros::Publisher drive_pub_;
+
     double kp_, ki_, kd_;
     double prev_error_, error_;
     double integral_;
-    double desired_left_wall_distance_;
-    double lookahead_distance_;
+
     double prev_reading_time_;
     double current_reading_time;
+
+    double desired_left_wall_distance_;
+    double lookahead_distance_;
+
+    std::map<std::string, double> error_based_velocities_;
 };
 
 int main(int argc, char ** argv)
