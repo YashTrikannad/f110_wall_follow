@@ -29,8 +29,11 @@ public:
     /// @return
     double get_range_at_angle(const sensor_msgs::LaserScan::ConstPtr &scan_msg, const double& angle) const
     {
-        const double corrected_angle = angle + 3.14;
-        const double required_range_index = corrected_angle*scan_msg->ranges.size()/6.28;
+        const double corrected_angle = angle + ((scan_msg->angle_max - scan_msg->angle_min)/2);
+        ROS_WARN("Corrected Angle : %f", corrected_angle);
+        const double required_range_index = corrected_angle*scan_msg->ranges.size()/
+                (scan_msg->angle_max - scan_msg->angle_min);
+        ROS_WARN("Required Range Index : %f", required_range_index);
         return scan_msg->ranges[static_cast<int>(required_range_index)];
     }
 
@@ -43,11 +46,21 @@ public:
 
         integral_ += error_;
 
-        const double p_control_value = kp_*error_ + kd_*(error_ - prev_error_)/dt + ki_*(integral_);
+        double p_control_value = kp_*error_ + kd_*(error_ - prev_error_)/dt + ki_*(integral_);
 
         ackermann_msgs::AckermannDriveStamped drive_msg;
         drive_msg.header.stamp = ros::Time::now();
         drive_msg.header.frame_id = "laser";
+
+        if(p_control_value >0.418)
+        {
+            p_control_value = 0.418;
+        }
+        else if(p_control_value < -0.418)
+        {
+            p_control_value = -0.418;
+        }
+
         drive_msg.drive.steering_angle = p_control_value;
 
         if(abs(p_control_value) > 0.349)
@@ -73,9 +86,9 @@ public:
     /// @return
     void get_error(const sensor_msgs::LaserScan::ConstPtr &scan_msg)
     {
-        const auto distance_of_a = get_range_at_angle(scan_msg, 0.7853);
-        const auto distance_of_b = get_range_at_angle(scan_msg, 0.7853*2);
-        constexpr auto theta = 0.7853;
+        const auto distance_of_a = get_range_at_angle(scan_msg, 0.5);
+        const auto distance_of_b = get_range_at_angle(scan_msg, 1.4);
+        constexpr auto theta = 0.9;
 
         const auto alpha = std::atan2(distance_of_a*cos(theta)-distance_of_b,distance_of_a*sin(theta));
 
