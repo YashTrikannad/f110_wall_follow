@@ -3,6 +3,7 @@
     <node pkg="yasht_safety" name="safety_node" type="safety_node" output="screen"/>
 
     <rosparam command="load" file="$(find f110_wall_follow)/config/config.yaml" />
+    <env name="ROSCONSOLE_CONFIG_FILE" value="$(find f110_wall_follow)/config/rosconsole_config.conf"/>
 
     <node pkg="f110_wall_follow" name="f110_wall_follow_node" type="f110_wall_follow_node" output="screen"/>
 
