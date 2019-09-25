@@ -29,7 +29,14 @@ public:
 
     std::vector<double> preprocess_scan(const sensor_msgs::LaserScan::ConstPtr &scan_msg)
     {
-        const auto truncated_ranges = wf::truncate(scan_msg, truncated_coverage_angle_);
+        auto truncated_ranges = wf::truncate(scan_msg, truncated_coverage_angle_);
+        for(auto& range : truncated_ranges)
+        {
+            if(std::isnan(range))
+            {
+                range = 0;
+            }
+        }
         return wf::apply_smoothing_filter(truncated_ranges, smoothing_filter_size_);
     }
 
